@@ -1,0 +1,35 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trend Sepet - Giriş Yap</title>
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+</head>
+<body>
+    <header>
+        <button class="admin-button" onclick="location.href='/admin/'">Admin Girişi</button>
+    </header>
+    <main>
+        <div class="login-container">
+            <h1 class="site-name">Trend Sepet</h1>
+            <form method="post" action="{% url 'login' %}">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label for="username">Kullanıcı Adı:</label>
+                    <input type="text" id="username" name="username" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">Şifre:</label>
+                    <input type="password" id="password" name="password" required>
+                </div>
+                <button type="submit" class="submit-button">Giriş Yap</button>
+            </form>
+            {% if error %}
+                <p class="error-message">{{ error }}</p>
+            {% endif %}
+        </div>
+    </main>
+</body>
+</html>

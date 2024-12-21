@@ -1,24 +1,41 @@
 from django.shortcuts import render, redirect
-from django.contrib.auth import authenticate, login, logout
-from .forms import LoginForm
+from django.contrib.auth.hashers import check_password
+from .models import Customer
 
-def user_login(request):
+def login_view(request):
     if request.method == 'POST':
-        form = LoginForm(request.POST)
-        if form.is_valid():
-            username = form.cleaned_data['username']
-            password = form.cleaned_data['password']
-            user = authenticate(request, username=username, password=password)
-            if user:
-                login(request, user)
-                request.session['username'] = username  # Kullanıcı adını session'a ekle
-                return redirect('home')  # Başarılı girişten sonra ana sayfaya yönlendir
-            else:
-                return render(request, 'login.html', {'form': form, 'error': 'Geçersiz kullanıcı adı veya şifre'})
-    else:
-        form = LoginForm()
-    return render(request, 'login.html', {'form': form})
+        username = request.POST.get('username')
+        password = request.POST.get('password')
 
-def user_logout(request):
-    logout(request)  # Kullanıcının oturumunu sonlandır
-    return redirect('login')  # Çıkıştan sonra giriş sayfasına yönlendir
+        try:
+            user = Customer.objects.get(username=username)
+            if check_password(password, user.password):
+                # Kullanıcı girişi başarılı
+                request.session['user_id'] = user.id
+                request.session['username'] = user.username
+                return redirect('user_dashboard')  # Tek bir kullanıcı dashboard sayfasına yönlendirme
+            else:
+                return render(request, 'login.html', {'error': 'Hatalı şifre!'})
+        except Customer.DoesNotExist:
+            return render(request, 'login.html', {'error': 'Kullanıcı bulunamadı!'})
+    return render(request, 'login.html')
+
+def user_dashboard(request):
+    username = request.session.get('username', 'Anonim Kullanıcı')
+    return render(request, 'user_dashboard.html', {'username': username})
+
+def admin_dashboard(request):
+    username = request.session.get('username', 'Anonim Kullanıcı')
+    return render(request, 'admin_dashboard.html', {'username': username})
+
+def login_required(view_func):
+    def wrapper(request, *args, **kwargs):
+        if 'user_id' not in request.session:
+            return redirect('login')
+        return view_func(request, *args, **kwargs)
+    return wrapper
+
+@login_required
+def user_dashboard(request):
+    username = request.session.get('username', 'Anonim Kullanıcı')
+    return render(request, 'user_dashboard.html', {'username': username})
