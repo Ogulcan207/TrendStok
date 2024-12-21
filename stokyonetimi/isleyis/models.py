@@ -8,12 +8,12 @@ class Customer(models.Model):
         ('Standard', 'Standard'),
     ]
 
-    customer_name = models.CharField(max_length=100)
+    customer_name = models.CharField(max_length=100, null=True)
     username = models.CharField(max_length=50, unique=True)  # Kullanıcı adı
-    password = models.CharField(max_length=128, default=make_password('defaultpassword'))
-    budget = models.DecimalField(max_digits=10, decimal_places=2)
-    customer_type = models.CharField(max_length=10, choices=CUSTOMER_TYPES)
-    total_spent = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    password = models.CharField(max_length=128, null=True)
+    budget = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+    customer_type = models.CharField(max_length=10, choices=CUSTOMER_TYPES, null=True)
+    total_spent = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, null=True)
 
     def save(self, *args, **kwargs):
         # Şifre hashlenmemişse hashle
@@ -29,6 +29,7 @@ class Product(models.Model):
     product_name = models.CharField(max_length=100)
     stock = models.PositiveIntegerField()
     price = models.DecimalField(max_digits=10, decimal_places=2)
+    image = models.ImageField(upload_to='products/', null=True, blank=True)  # Resim yolu
 
     def __str__(self):
         return self.product_name
