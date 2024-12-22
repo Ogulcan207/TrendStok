@@ -1,12 +1,73 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kullanıcı Paneli</title>
+    <title>Trend Sepet - Kullanıcı Paneli</title>
+    <link rel="stylesheet" href="{% static 'css/user_dashboard.css' %}">
 </head>
 <body>
-    <h2>Merhaba {{ username }}</h2>
-    <p>Bu panelde yapılacak işlemler listelenebilir.</p>
+    <header>
+        <div class="welcome">
+            <h1>Trend Sepete Hoş Geldiniz!</h1>
+        </div>
+        <div class="user-info">
+            <button onclick="toggleUserDetails()">Bilgilerim</button>
+            <a href="{% url 'cart' %}" class="cart-btn">Sepetim</a>
+            <a href="#" class="notifications-btn">Bildirimler</a>
+        </div>
+    </header>
+
+    <div id="user-details" class="hidden">
+        <h3>Kullanıcı Bilgileri</h3>
+        <p>Ad: {{ username }}</p>
+        <p>Diğer bilgiler buraya eklenebilir.</p>
+    </div>
+
+    <main>
+        <div class="filters">
+            <h2>Ürünler</h2>
+            <form method="get" action="">
+                <label for="search">Ara:</label>
+                <input type="text" id="search" name="search" placeholder="Ürün adı..." value="{{ search_query }}">
+                
+                <label for="price">Fiyat:</label>
+                <select id="price" name="price">
+                    <option value="" {% if not price_filter %}selected{% endif %}>Tümü</option>
+                    <option value="low" {% if price_filter == 'low' %}selected{% endif %}>Düşükten Yükseğe</option>
+                    <option value="high" {% if price_filter == 'high' %}selected{% endif %}>Yüksekten Düşüğe</option>
+                </select>
+                
+                <button type="submit">Filtrele</button>
+            </form>
+        </div>
+
+        <div class="product-list">
+            {% for product in products %}
+                <div class="product">
+                    <img src="{{ product.image }}" alt="{{ product.product_name }}">
+                    <h3>{{ product.product_name }}</h3>
+                    <p>{{ product.description }}</p>
+                    <p>Fiyat: {{ product.price }} TL</p>
+                    <p>Stok: {{ product.stock }}</p>
+                    <form method="post" action="{% url 'add_to_cart' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="product_id" value="{{ product.id }}">
+                        <button type="submit" class="add-to-cart-btn">Sepete Ekle</button>
+                    </form>
+                </div>
+            {% empty %}
+                <p>Şu anda görüntülenecek ürün bulunmamaktadır.</p>
+            {% endfor %}
+        </div>
+
+    </main>
 </body>
+<script>
+    function toggleUserDetails() {
+        const userDetails = document.getElementById('user-details');
+        userDetails.classList.toggle('hidden');
+    }
+</script>
 </html>

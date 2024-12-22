@@ -1,0 +1,148 @@
+/* Genel Ayarlar */
+body {
+    font-family: 'Arial', sans-serif;
+    margin: 0;
+    padding: 0;
+    background: linear-gradient(to right, #6a11cb, #2575fc); /* Mor ve mavi geçiş */
+    color: white;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+/* Header */
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    background-color: rgba(0, 0, 0, 0.6);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+header h1 {
+    margin: 0;
+    font-size: 24px;
+}
+
+header .user-info button {
+    background-color: #4b0082;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+header .user-info button:hover {
+    background-color: #371063;
+}
+.user-info a {
+    background-color: #4b0082;
+    color: white;
+    text-decoration: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    margin-left: 10px;
+    font-weight: bold;
+}
+
+.user-info a:hover {
+    background-color: #371063;
+}
+
+/* Kullanıcı Bilgileri */
+#user-details {
+    display: none;
+    background-color: rgba(255, 255, 255, 0.2);
+    padding: 20px;
+    border-radius: 10px;
+    margin: 20px;
+}
+
+#user-details.hidden {
+    display: none;
+}
+
+/* Filtreleme Alanı */
+.filters {
+    padding: 20px;
+    background-color: rgba(0, 0, 0, 0.3);
+    border-radius: 10px;
+    margin: 20px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+.filters form {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.filters label {
+    font-size: 14px;
+    margin-right: 5px;
+}
+
+.filters input, .filters select, .filters button {
+    padding: 10px;
+    border: none;
+    border-radius: 5px;
+    font-size: 14px;
+    outline: none;
+}
+
+.filters button {
+    background-color: #4b0082;
+    color: white;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.filters button:hover {
+    background-color: #371063;
+}
+
+/* Ürün Listesi */
+.product-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    padding: 20px;
+}
+
+.product {
+    background-color: rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    padding: 15px;
+    text-align: center;
+    flex: 1 1 calc(25% - 40px); /* 4 sütun düzen */
+    margin: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.product:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 10px rgba(0, 0, 0, 0.5);
+}
+
+.product img {
+    width: 100%; /* Yatay alana uyum sağlar */
+    height: 200px; /* Sabit yükseklik */
+    object-fit: cover; /* Görselleri kırpmadan alanı doldurur */
+    border-radius: 10px;
+    margin-bottom: 10px;
+}
+
+
+.product h3 {
+    margin: 0 0 10px 0;
+    font-size: 18px;
+}
+
+.product p {
+    margin: 5px 0;
+    font-size: 14px;
+}

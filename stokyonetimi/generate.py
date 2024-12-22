@@ -105,8 +105,8 @@ def create_orders():
 
 if __name__ == "__main__":
     print("Sahte veriler oluşturuluyor...")
-    clear_data()
+    #clear_data()
     create_customers()
-    create_products()
-    create_orders()
+    #create_products()
+    #create_orders()
     print("Sahte veriler başarıyla oluşturuldu!")

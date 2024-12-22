@@ -29,8 +29,8 @@ class Product(models.Model):
     product_name = models.CharField(max_length=100)
     stock = models.PositiveIntegerField()
     price = models.DecimalField(max_digits=10, decimal_places=2)
-    image = models.ImageField(upload_to='products/', null=True, blank=True)  # Resim yolu
-
+    image = models.ImageField(null=True, blank=True)  # Resim yolu
+    description = models.TextField(null=True, blank=True)  # Ürün açıklaması
     def __str__(self):
         return self.product_name
 

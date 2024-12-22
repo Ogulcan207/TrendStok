@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sepetim</title>
+</head>
+<body>
+    <h1>Sepetiniz</h1>
+    <div class="cart-items">
+        {% for item in cart %}
+            <div class="cart-item">
+                <h3>{{ item.name }}</h3>
+                <p>Fiyat: {{ item.price }} TL</p>
+                <p>Adet: {{ item.quantity }}</p>
+            </div>
+        {% endfor %}
+    </div>
+    <h2>Toplam Fiyat: {{ total_price }} TL</h2>
+</body>
+</html>

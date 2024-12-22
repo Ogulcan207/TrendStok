@@ -129,6 +129,3 @@ STATICFILES_DIRS = [
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'  # Veritabanında saklama
-
-MEDIA_URL = '/media/'  # Resim dosyalarına erişim için URL
-MEDIA_ROOT = os.path.join(BASE_DIR, 'static/products')  # Resim dosyalarının fiziksel konumu
