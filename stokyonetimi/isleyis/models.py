@@ -11,6 +11,7 @@ class Customer(models.Model):
     customer_name = models.CharField(max_length=100, null=True)
     username = models.CharField(max_length=50, unique=True)  # Kullanıcı adı
     password = models.CharField(max_length=128, null=True)
+    email = models.EmailField(max_length=254, unique=True, null=True)  # E-posta alanı eklendi
     budget = models.DecimalField(max_digits=10, decimal_places=2, null=True)
     customer_type = models.CharField(max_length=10, choices=CUSTOMER_TYPES, null=True)
     total_spent = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, null=True)

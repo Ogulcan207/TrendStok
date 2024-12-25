@@ -1,21 +1,80 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sepetim</title>
+    <link rel="stylesheet" href="{% static 'css/cart.css' %}">
 </head>
 <body>
-    <h1>Sepetiniz</h1>
-    <div class="cart-items">
-        {% for item in cart %}
-            <div class="cart-item">
-                <h3>{{ item.name }}</h3>
-                <p>Fiyat: {{ item.price }} TL</p>
-                <p>Adet: {{ item.quantity }}</p>
+    <header>
+        <h1>Sepetiniz</h1>
+        <a href="{% url 'user_dashboard' %}" class="back-btn">Geri Dön</a>
+    </header>
+    <main>
+        {% if messages %}
+            <ul class="messages">
+                {% for message in messages %}
+                    <li class="{{ message.tags }}">{{ message }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+
+        {% if cart %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Ürün Resmi</th>
+                        <th>Ürün</th>
+                        <th>Adet</th>
+                        <th>Fiyat</th>
+                        <th>Toplam</th>
+                        <th>İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in cart %}
+                        <tr>
+                            <td>
+                                {% if item.image %}
+                                    <img src="{{ item.image }}" alt="{{ item.name }}">
+                                {% else %}
+                                    <p>Resim yok</p>
+                                {% endif %}
+                            </td>
+                            <td>{{ item.name }}</td>
+                            <td>
+                                <form method="post" action="{% url 'update_cart' %}">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="product_id" value="{{ item.id }}">
+                                    <input type="number" name="quantity" value="{{ item.quantity }}" min="1" max="5">
+                                    <button type="submit">Güncelle</button>
+                                </form>
+                            </td>
+                            <td>{{ item.price }} TL</td>
+                            <td>{{ item.quantity|floatformat:2 }} × {{ item.price|floatformat:2 }} = {{ item.quantity|floatformat:2|add:item.price }} TL</td>
+                             <td>
+                                <form method="post" action="{% url 'remove_from_cart' %}">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="product_id" value="{{ item.id }}">
+                                    <button type="submit" class="remove-btn">Kaldır</button>
+                                </form>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <div class="cart-summary">
+                <p><strong>Toplam Fiyat:</strong> {{ total_price }} TL</p>
+                <form method="post" action="{% url 'place_order' %}">
+                    {% csrf_token %}
+                    <button type="submit" class="order-btn">Sipariş Ver</button>
+                </form>
             </div>
-        {% endfor %}
-    </div>
-    <h2>Toplam Fiyat: {{ total_price }} TL</h2>
+        {% else %}
+            <p>Sepetinizde ürün bulunmamaktadır.</p>
+        {% endif %}
+    </main>
 </body>
 </html>

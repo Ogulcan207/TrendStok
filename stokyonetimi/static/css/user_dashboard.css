@@ -33,11 +33,13 @@ header .user-info button {
     border-radius: 5px;
     cursor: pointer;
     font-weight: bold;
+    transition: background-color 0.3s ease;
 }
 
 header .user-info button:hover {
     background-color: #371063;
 }
+
 .user-info a {
     background-color: #4b0082;
     color: white;
@@ -46,6 +48,7 @@ header .user-info button:hover {
     border-radius: 5px;
     margin-left: 10px;
     font-weight: bold;
+    transition: background-color 0.3s ease;
 }
 
 .user-info a:hover {
@@ -59,10 +62,11 @@ header .user-info button:hover {
     padding: 20px;
     border-radius: 10px;
     margin: 20px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
 }
 
 #user-details.hidden {
-    display: none;
+    display: none; /* Gizli */
 }
 
 /* Filtreleme Alanı */
@@ -98,6 +102,7 @@ header .user-info button:hover {
     color: white;
     cursor: pointer;
     font-weight: bold;
+    transition: background-color 0.3s ease;
 }
 
 .filters button:hover {
@@ -134,8 +139,12 @@ header .user-info button:hover {
     object-fit: cover; /* Görselleri kırpmadan alanı doldurur */
     border-radius: 10px;
     margin-bottom: 10px;
+    transition: transform 0.3s ease;
 }
 
+.product img:hover {
+    transform: scale(1.05);
+}
 
 .product h3 {
     margin: 0 0 10px 0;
@@ -145,4 +154,100 @@ header .user-info button:hover {
 .product p {
     margin: 5px 0;
     font-size: 14px;
+}
+
+.add-to-cart-btn {
+    background-color: #6a11cb;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    font-size: 14px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+.add-to-cart-btn:hover {
+    background-color: #2575fc;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 10px rgba(0, 0, 0, 0.5);
+}
+
+.add-to-cart-btn:active {
+    transform: translateY(1px);
+    box-shadow: 0 3px 5px rgba(0, 0, 0, 0.3);
+}
+
+/* Yan Panel */
+.sidebar {
+    position: fixed;
+    top: 0;
+    right: -300px; /* Başlangıçta görünmesin */
+    width: 300px;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 20px;
+    box-shadow: -2px 0 5px rgba(0, 0, 0, 0.5);
+    transition: right 0.3s ease; /* Animasyonlu geçiş */
+    z-index: 1000;
+}
+
+.sidebar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid white;
+    padding-bottom: 10px;
+}
+
+.sidebar-header h3 {
+    margin: 0;
+    font-size: 20px;
+}
+
+.close-btn {
+    background: none;
+    color: white;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+}
+
+.sidebar.open {
+    right: 0; /* Açıldığında sağdan görünsün */
+}
+
+.sidebar label {
+    display: block;
+    margin: 10px 0 5px;
+    font-size: 14px;
+}
+
+.sidebar input {
+    width: 100%;
+    padding: 10px;
+    border: none;
+    border-radius: 5px;
+    font-size: 14px;
+    margin-bottom: 10px;
+}
+
+.sidebar .update-btn {
+    background-color: #4b0082;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    font-size: 16px;
+    cursor: pointer;
+    font-weight: bold;
+    margin-top: 10px;
+    transition: background-color 0.3s ease;
+}
+
+.sidebar .update-btn:hover {
+    background-color: #371063;
 }

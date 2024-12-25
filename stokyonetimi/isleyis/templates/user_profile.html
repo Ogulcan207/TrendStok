@@ -1,0 +1,49 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kişisel Bilgilerim</title>
+    <link rel="stylesheet" href="{% static 'css/user_profile.css' %}">
+</head>
+<body>
+    <header>
+        <div class="header-container">
+            <h1>Kişisel Bilgilerim</h1>
+            <a href="{% url 'user_dashboard' %}" class="back-btn">Geri Dön</a>
+        </div>
+    </header>
+    <main>
+        <div class="profile-container">
+            <div class="user-info-section">
+                <h2>Kullanıcı Bilgileriniz</h2>
+                <p><strong>Ad Soyad:</strong> {{ user.customer_name }}</p>
+                <p><strong>Kullanıcı Adı:</strong> {{ user.username }}</p>
+                <p><strong>E-posta:</strong> {{ user.email }}</p>
+                <p><strong>Bütçe:</strong> {{ user.budget }} TL</p>
+                <p><strong>Toplam Harcama:</strong> {{ user.total_spent }} TL</p>
+                <p><strong>Kullanıcı Türü:</strong> {{ user.customer_type }}</p>
+            </div>
+            <hr>
+            <h2>Bilgileri Güncelle</h2>
+            <form method="post" action="{% url 'update_profile' %}">
+                {% csrf_token %}
+                <label for="customer_name">Ad Soyad:</label>
+                <input type="text" id="customer_name" name="customer_name" value="{{ user.customer_name }}" required>
+
+                <label for="username">Kullanıcı Adı:</label>
+                <input type="text" id="username" name="username" value="{{ user.username }}" required>
+                
+                <label for="email">E-posta:</label>
+                <input type="email" id="email" name="email" value="{{ user.email }}" required>
+                
+                <label for="password">Yeni Şifre:</label>
+                <input type="password" id="password" name="password" placeholder="Şifre (opsiyonel)">
+                
+                <button type="submit" class="update-btn">Bilgileri Güncelle</button>
+            </form>
+        </div>
+    </main>
+</body>
+</html>

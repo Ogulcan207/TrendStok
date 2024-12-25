@@ -37,11 +37,13 @@ def create_customers():
         total_spent = 0.00
         username = fake.user_name()
         password = make_password('test1234')  # Şifre hash'lenerek kaydediliyor
+        email = fake.email()  # E-posta oluşturuluyor
 
         Customer.objects.create(
             customer_name=fake.name(),
             username=username,
             password=password,
+            email=email,  # E-posta alanı eklendi
             budget=budget,
             customer_type=customer_type,
             total_spent=total_spent

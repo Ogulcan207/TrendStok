@@ -13,17 +13,11 @@
             <h1>Trend Sepete Hoş Geldiniz!</h1>
         </div>
         <div class="user-info">
-            <button onclick="toggleUserDetails()">Bilgilerim</button>
+            <a href="{% url 'user_profile' %}" class="cart-btn">Bilgilerim</a>
             <a href="{% url 'cart' %}" class="cart-btn">Sepetim</a>
             <a href="#" class="notifications-btn">Bildirimler</a>
         </div>
-    </header>
-
-    <div id="user-details" class="hidden">
-        <h3>Kullanıcı Bilgileri</h3>
-        <p>Ad: {{ username }}</p>
-        <p>Diğer bilgiler buraya eklenebilir.</p>
-    </div>
+    </header> 
 
     <main>
         <div class="filters">
@@ -66,8 +60,9 @@
 </body>
 <script>
     function toggleUserDetails() {
-        const userDetails = document.getElementById('user-details');
-        userDetails.classList.toggle('hidden');
-    }
+    const userDetails = document.getElementById('user-details');
+    userDetails.classList.toggle('open');
+}
+
 </script>
 </html>
