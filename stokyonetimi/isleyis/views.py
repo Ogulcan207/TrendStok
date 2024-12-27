@@ -1,7 +1,9 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.hashers import check_password, make_password
+from django.contrib.auth import authenticate, login
 from .models import Customer, Product
-from django.templatetags.static import static
+from django.contrib.auth.models import User  # User modelini ekleyin
+import json
 
 def login_view(request):
     if request.method == 'POST':
@@ -52,7 +54,48 @@ def user_dashboard(request):
 
 def admin_dashboard(request):
     username = request.session.get('username', 'Anonim Kullanıcı')
-    return render(request, 'admin_dashboard.html', {'username': username})
+    products = Product.objects.all()  # Tüm ürünleri al
+    
+    products_data = [
+    {"product_name": product.product_name, "stock": product.stock}
+    for product in products
+    ]
+    products_data_json = json.dumps(products_data)  # JSON formatına dönüştür
+
+
+    if request.method == 'POST':
+        if 'add_product' in request.POST:
+            product_name = request.POST.get('product_name')
+            stock = request.POST.get('stock')
+            price = request.POST.get('price')
+            Product.objects.create(product_name=product_name, stock=stock, price=price)
+            return redirect('admin_dashboard')  # Ekleme sonrası yönlendirme
+
+        elif 'update_product' in request.POST:
+            product_id = request.POST.get('product_id')
+            product_name = request.POST.get('product_name')
+            stock = request.POST.get('stock')
+            price = request.POST.get('price')
+
+            # Ürünü güncelle
+            product = Product.objects.get(id=product_id)
+            product.product_name = product_name
+            product.stock = stock
+            product.price = price
+            product.save()
+            return redirect('admin_dashboard')
+
+        elif 'delete_product' in request.POST:
+            product_id = request.POST.get('product_id')
+            product = Product.objects.get(id=product_id)
+            product.delete()  # Ürünü sil
+            return redirect('admin_dashboard')
+
+    return render(request, 'admin_dashboard.html', {
+        'username': username,
+        'products': products,
+        'products_data': products_data_json  # Grafik verileri
+    })
 
 
 @login_required
@@ -166,3 +209,18 @@ def place_order(request):
             )
         request.session['cart'] = []  # Sepeti temizle
         return redirect('user_dashboard')
+
+def admin_login(request):
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+        user = authenticate(request, username=username, password=password)
+
+        # Kullanıcının superuser olup olmadığını kontrol et
+        if user is not None and user.is_superuser:  # Sadece superuser'lar admin olabilir
+            login(request, user)
+            return redirect('admin_dashboard')  # Giriş başarılıysa admin paneline yönlendir
+        else:
+            return render(request, 'admin_login.html', {'error': 'Geçersiz kullanıcı adı veya şifre!'})
+
+    return render(request, 'admin_login.html')
