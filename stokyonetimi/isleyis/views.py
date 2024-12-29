@@ -1,9 +1,27 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.hashers import check_password, make_password
 from django.contrib.auth import authenticate, login
-from .models import Customer, Product
-from django.contrib.auth.models import User  # User modelini ekleyin
-import json
+from .models import Customer, Product, Order, OrderDetail
+import json, time
+from django.utils.timezone import now
+from threading import Thread
+from django.http import JsonResponse
+from django.db import transaction
+from celery import shared_task
+from decimal import Decimal
+
+class OrderThread(Thread):
+    def __init__(self, order):
+        super().__init__()
+        self.order = order
+
+    def run(self):
+        print(f"Sipariş {self.order.id} işleniyor...")
+        time.sleep(5)  # İşleme süresi (örnek olarak 5 saniye verildi)
+        self.order.order_status = 'Completed'
+        self.order.save()
+        print(f"Sipariş {self.order.id} tamamlandı.")
+
 
 def login_view(request):
     if request.method == 'POST':
@@ -51,17 +69,19 @@ def user_dashboard(request):
         'price_filter': price_filter,
     })
 
-
 def admin_dashboard(request):
-    username = request.session.get('username', 'Anonim Kullanıcı')
-    products = Product.objects.all()  # Tüm ürünleri al
-    
+    products = Product.objects.all()
     products_data = [
-    {"product_name": product.product_name, "stock": product.stock}
-    for product in products
+        {"product_name": product.product_name, "stock": product.stock}
+        for product in products
     ]
-    products_data_json = json.dumps(products_data)  # JSON formatına dönüştür
+    return render(request, 'admin_dashboard.html', {
+        'username': request.session.get('username', 'Anonim Kullanıcı'),
+        'products_data': json.dumps(products_data)
+    })
 
+def stock_management(request):
+    products = Product.objects.all()
 
     if request.method == 'POST':
         if 'add_product' in request.POST:
@@ -69,33 +89,60 @@ def admin_dashboard(request):
             stock = request.POST.get('stock')
             price = request.POST.get('price')
             Product.objects.create(product_name=product_name, stock=stock, price=price)
-            return redirect('admin_dashboard')  # Ekleme sonrası yönlendirme
-
+            return redirect('stock_management')
         elif 'update_product' in request.POST:
             product_id = request.POST.get('product_id')
             product_name = request.POST.get('product_name')
             stock = request.POST.get('stock')
             price = request.POST.get('price')
-
-            # Ürünü güncelle
             product = Product.objects.get(id=product_id)
             product.product_name = product_name
             product.stock = stock
             product.price = price
             product.save()
-            return redirect('admin_dashboard')
-
+            return redirect('stock_management')
         elif 'delete_product' in request.POST:
             product_id = request.POST.get('product_id')
             product = Product.objects.get(id=product_id)
-            product.delete()  # Ürünü sil
-            return redirect('admin_dashboard')
+            product.delete()
+            return redirect('stock_management')
 
-    return render(request, 'admin_dashboard.html', {
-        'username': username,
-        'products': products,
-        'products_data': products_data_json  # Grafik verileri
-    })
+    return render(request, 'stock_management.html', {'products': products})
+
+def pie_chart(request):
+    products = Product.objects.all()
+
+    products_data = [
+        {"product_name": product.product_name, "stock": product.stock}
+        for product in products
+    ]
+    products_data_json = json.dumps(products_data)
+
+    return render(request, 'pie_chart.html', {'products_data': products_data_json})
+
+from django.views.decorators.csrf import csrf_exempt
+
+@csrf_exempt
+def update_priorities_view(request):
+    """
+    Dinamik öncelik güncelleme işlemini tetikler.
+    """
+    update_order_priorities()
+    return JsonResponse({'status': 'success', 'message': 'Priorities updated!'})
+
+
+def order_management(request):
+    update_order_priorities()
+    orders = Order.objects.prefetch_related('order_details').filter(order_status='Pending').order_by('-priority_score')
+
+    if request.method == 'POST':
+        if 'approve_all' in request.POST:
+            for order in orders:
+                thread = OrderThread(order)
+                thread.start()
+            return redirect('order_management')
+
+    return render(request, 'order_management.html', {'orders': orders})
 
 
 @login_required
@@ -192,24 +239,6 @@ def remove_from_cart(request):
         request.session['cart'] = cart
         return redirect('cart')
 
-from .models import Order
-
-def place_order(request):
-    if request.method == 'POST':
-        cart = request.session.get('cart', [])
-        user = Customer.objects.get(id=request.session['user_id'])
-
-        for item in cart:
-            Order.objects.create(
-                customer=user,
-                product_id=item['id'],
-                quantity=item['quantity'],
-                total_price=item['price'] * item['quantity'],
-                order_status='Pending',
-            )
-        request.session['cart'] = []  # Sepeti temizle
-        return redirect('user_dashboard')
-
 def admin_login(request):
     if request.method == 'POST':
         username = request.POST.get('username')
@@ -224,3 +253,98 @@ def admin_login(request):
             return render(request, 'admin_login.html', {'error': 'Geçersiz kullanıcı adı veya şifre!'})
 
     return render(request, 'admin_login.html')
+
+def place_order(request):
+    if request.method == 'POST':
+        cart = request.session.get('cart', [])
+        user = Customer.objects.get(id=request.session['user_id'])
+
+        if not cart:
+            return redirect('cart')
+
+        # Toplam fiyatı hesapla
+        total_price = sum(Decimal(item['price']) * item['quantity'] for item in cart)
+
+        # Kullanıcının bütçesini kontrol et
+        if user.budget < total_price:
+            from django.contrib import messages
+            messages.error(request, "Yetersiz bütçe. Siparişi tamamlayamazsınız.")
+            return redirect('cart')
+
+        # Yeni siparişi oluştur
+        order = Order.objects.create(
+            customer=user,
+            total_price=total_price,
+            order_status='Pending',
+            priority_score=0,  # Gerekirse hesaplayabilirsiniz
+            elapsed_time=0
+        )
+
+        # Sipariş detaylarını oluştur
+        for item in cart:
+            product = Product.objects.filter(id=item.get('id')).first()
+            if product:
+                if item.get('quantity', 1) > 5:  # Ürün miktarını tekrar kontrol et
+                    from django.contrib import messages
+                    messages.error(request, f"{product.product_name} ürününden en fazla 5 adet alabilirsiniz.")
+                    return redirect('cart')
+
+                OrderDetail.objects.create(
+                    order=order,
+                    product=product,
+                    quantity=item.get('quantity', 1),
+                    price=Decimal(item.get('price', 0))
+                )
+
+        user.save()
+
+        # Sepeti temizle
+        request.session['cart'] = []
+        return redirect('user_dashboard')
+
+
+def update_order_priorities():
+    """
+    Tüm bekleyen siparişlerin dinamik öncelik skorunu günceller.
+    """
+    pending_orders = Order.objects.filter(order_status='Pending')
+    with transaction.atomic():
+        for order in pending_orders:
+            order.elapsed_time = (now() - order.order_date).total_seconds()
+            order.priority_score = calculate_priority_score(order.customer.customer_type, order.elapsed_time)
+            order.save()
+
+
+def admin_order_list(request):
+    pending_orders = Order.objects.filter(order_status='Pending').order_by('-priority_score')
+    orders_data = [
+        {
+            'customer_name': order.customer.customer_name,
+            'product_name': order.product.product_name,
+            'priority_score': order.priority_score,
+            'status': order.order_status,
+        }
+        for order in pending_orders
+    ]
+    return JsonResponse({'orders': orders_data})
+
+def calculate_priority_score(customer_type, elapsed_time, weight=0.5):
+    """
+    Dinamik öncelik skorunu hesaplar.
+    :param customer_type: Müşteri türü (Premium veya Standard)
+    :param elapsed_time: Geçen süre (saniye olarak)
+    :param weight: Bekleme süresinin ağırlığı (varsayılan 0.5)
+    :return: Dinamik öncelik skoru (float)
+    """
+    base_priority = 15 if customer_type == 'Premium' else 10
+    return base_priority + (elapsed_time * weight)
+
+
+def approve_all_orders(request):
+    if request.method == 'POST':
+        pending_orders = Order.objects.filter(order_status='Pending')
+        for order in pending_orders:
+            order.order_status = 'Completed'
+            order.save()
+        return redirect('admin_dashboard')
+    

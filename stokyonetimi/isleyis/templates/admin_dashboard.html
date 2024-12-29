@@ -1,155 +1,37 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="en">
+<html lang="tr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Paneli</title>
     <link rel="stylesheet" href="{% static 'css/admin_dashboard.css' %}">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
 </head>
 <body>
     <header>
         <h1>Admin Paneli</h1>
     </header>
 
-    <main>
-        <h2>Ürün Stok Durumu</h2>
-        <table>
-            <thead>
-                <tr>
-                    <th>Ürün Adı</th>
-                    <th>Stok Miktarı</th>
-                    <th>Fiyat</th>
-                    <th>İşlemler</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for product in products %}
-                <tr>
-                    <form method="post">
-                        {% csrf_token %}
-                        <td><input type="text" name="product_name" value="{{ product.product_name }}" required></td>
-                        <td><input type="number" name="stock" value="{{ product.stock }}" required></td>
-                        <td><input type="number" name="price" value="{{ product.price }}" required></td>
-                        <td>
-                            <input type="hidden" name="product_id" value="{{ product.id }}">
-                            <button type="submit" name="update_product">Güncelle</button>
-                            <button type="submit" name="delete_product">Sil</button>
-                        </td>
-                    </form>
-                </tr>
-                {% endfor %}
-            </tbody>           
-        </table>
+    <div class="container">
+        <!-- Sol Panel -->
+        <aside class="sidebar">
+            <h2>Menü</h2>
+            <nav>
+                <ul>
+                    <li><a href="{% url 'stock_management' %}" class="menu-link">Stok Yönetimi</a></li>
+                    <li><a href="{% url 'pie_chart' %}" class="menu-link">Dairesel Grafik</a></li>
+                    <li><a href="{% url 'order_management' %}" class="menu-link">Sipariş Yönetimi</a></li>
+                </ul>
+            </nav>
+        </aside>
 
-        <h3>Yeni Ürün Ekle</h3>
-        <form method="post">
-            {% csrf_token %}
-            <input type="text" name="product_name" placeholder="Ürün Adı" required>
-            <input type="number" name="stock" placeholder="Stok" required>
-            <input type="number" step="0.01" name="price" placeholder="Fiyat" required>
-            <button type="submit" name="add_product" class="add-btn">Ekle</button>
-        </form>
-
-        <h3>Dairesel Grafik</h3>
-        <canvas id="stockChartPie" width="250" height="125"></canvas>
-    </main>
-
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            const productsData = JSON.parse('{{ products_data|safe }}');
-            const labels = productsData.map(product => product.product_name);
-            const data = productsData.map(product => product.stock);
-    
-            // Genişletilmiş renk paleti
-            const colors = [
-                'rgba(255, 99, 132, 0.8)',  // Kırmızı
-                'rgba(54, 162, 235, 0.8)', // Mavi
-                'rgba(255, 206, 86, 0.8)', // Sarı
-                'rgba(75, 192, 192, 0.8)', // Turkuaz
-                'rgba(153, 102, 255, 0.8)', // Mor
-                'rgba(255, 159, 64, 0.8)',  // Turuncu
-                'rgba(201, 203, 207, 0.8)', // Gri
-                'rgba(104, 212, 255, 0.8)', // Açık mavi
-                'rgba(255, 153, 204, 0.8)', // Pembe
-                'rgba(192, 255, 128, 0.8)'  // Açık yeşil
-            ];
-
-            const borderColors = colors.map(color => color.replace(/0.8\)/, '1)')); // Tam opaklık
-
-    
-            const criticalStockIndex = data.map((stock, index) => ({
-                index: index,
-                isCritical: stock < 30, // Kritik stok kontrolü
-                baseColor: colors[index % colors.length], // Ürün rengi
-                transparentColor: colors[index % colors.length].replace(/0.8\)/, '0.3)'), // Daha şeffaf renk
-            }));
-    
-            const ctxPie = document.getElementById('stockChartPie').getContext('2d');
-            const stockChartPie = new Chart(ctxPie, {
-                type: 'pie',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: 'Ürün Stokları',
-                        data: data,
-                        backgroundColor: colors,
-                        borderColor: borderColors,
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    plugins: {
-                        legend: {
-                            position: 'top',
-                        },
-                        tooltip: {
-                        callbacks: {
-                            label: function (context) {
-                                const label = context.label || '';
-                                const value = context.raw || 0;
-                                return `${label}: ${value}`;
-                            }
-                        }
-                    },
-                    datalabels: {
-                        display: true,
-                        formatter: (value, context) => {
-                            return context.chart.data.labels[context.dataIndex];
-                        },
-                        color: '#fff',
-                        font: {
-                            size: 14,
-                            weight: 'bold'
-                        }
-                    }
-                    }
-                },
-                plugins: [ChartDataLabels]
-            });
-    
-            // Yanıp sönme efektini uygulamak için setInterval
-            setInterval(() => {
-            const dataset = stockChartPie.data.datasets[0];
-            criticalStockIndex.forEach(({ index, isCritical, baseColor, transparentColor }) => {
-                if (isCritical) {
-                    dataset.backgroundColor[index] =
-                        dataset.backgroundColor[index] === baseColor ? 
-                        transparentColor : 
-                        baseColor; // Kendi rengi ile şeffaf rengi arasında geçiş yapar
-                }
-            });
-            stockChartPie.update();
-        }, 500); // 500ms aralıklarla yanıp söner
-    
-            // Grafik boyutunu küçültmek için
-            const canvas = document.getElementById('stockChartPie');
-            canvas.style.width = '300px'; // Genişlik
-            canvas.style.height = '300px'; // Yükseklik
-        });
-    </script>
+        <!-- Ana İçerik -->
+        <main class="content">
+            <section>
+                <h2>Admin Paneline Hoş Geldiniz</h2>
+                <p>Sol panelden istediğiniz işlemi seçebilirsiniz.</p>
+            </section>
+        </main>
+    </div>
 </body>
 </html>

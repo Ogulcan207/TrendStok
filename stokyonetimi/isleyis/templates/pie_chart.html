@@ -1,0 +1,113 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dairesel Grafik</title>
+    <link rel="stylesheet" href="{% static 'css/admin_dashboard.css' %}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
+</head>
+<body>
+    <h2>Dairesel Grafik</h2>
+    <canvas id="stockChartPie" width="400" height="400"></canvas><script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const productsData = JSON.parse('{{ products_data|safe }}');
+            const labels = productsData.map(product => product.product_name);
+            const data = productsData.map(product => product.stock);
+    
+            // Genişletilmiş renk paleti
+            const colors = [
+                'rgba(255, 99, 132, 0.5)',  // Kırmızı
+                'rgba(54, 162, 235, 0.5)',  // Mavi
+                'rgba(255, 206, 86, 0.5)',  // Sarı
+                'rgba(75, 192, 192, 0.5)',  // Turkuaz
+                'rgba(153, 102, 255, 0.5)', // Mor
+                'rgba(255, 159, 64, 0.5)'   // Turuncu
+            ];
+    
+            const borderColors = [
+                'rgba(255, 99, 132, 0.8)',  // Kırmızı
+                'rgba(54, 162, 235, 0.8)',  // Mavi
+                'rgba(255, 206, 86, 0.8)',  // Sarı
+                'rgba(75, 192, 192, 0.8)',  // Turkuaz
+                'rgba(153, 102, 255, 0.8)', // Mor
+                'rgba(255, 159, 64, 0.8)'   // Turuncu
+            ];
+    
+            // Kritik stok kontrolü için index ve temel renk bilgisi
+            const criticalStockIndex = data.map((stock, index) => ({
+                index: index,
+                isCritical: stock < 40, // Kritik stok kontrolü
+                baseColor: colors[index % colors.length], // Ürün rengi
+                transparentColor: colors[index % colors.length].replace(/0.8\)/, '0.3)'), // Daha şeffaf renk
+            }));
+    
+            const ctxPie = document.getElementById('stockChartPie').getContext('2d');
+            const stockChartPie = new Chart(ctxPie, {
+                type: 'pie',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Ürün Stokları',
+                        data: data,
+                        backgroundColor: colors.slice(0, data.length),
+                        borderColor: borderColors.slice(0, data.length),
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function (context) {
+                                    const label = context.label || '';
+                                    const value = context.raw || 0;
+                                    return `${label}: ${value}`;
+                                }
+                            }
+                        },
+                        datalabels: {
+                            display: true,
+                            formatter: (value, context) => {
+                                return context.chart.data.labels[context.dataIndex];
+                            },
+                            color: '#fff',
+                            font: {
+                                size: 14,
+                                weight: 'bold'
+                            }
+                        }
+                    }
+                },
+                plugins: [ChartDataLabels] // Chart.js DataLabels eklentisi
+            });
+    
+            // Yanıp sönme efektini uygulamak için setInterval
+            setInterval(() => {
+                const dataset = stockChartPie.data.datasets[0];
+                criticalStockIndex.forEach(({ index, isCritical, baseColor, transparentColor }) => {
+                    if (isCritical) {
+                        dataset.backgroundColor[index] =
+                            dataset.backgroundColor[index] === baseColor ? 
+                            transparentColor : 
+                            baseColor; // Kendi rengi ile şeffaf rengi arasında geçiş yapar
+                    }
+                });
+                stockChartPie.update();
+            }, 500); // 500ms aralıklarla yanıp söner
+    
+            // Grafik boyutunu küçültmek için
+            const canvas = document.getElementById('stockChartPie');
+            canvas.style.width = '400px'; // Genişlik
+            canvas.style.height = '400px'; // Yükseklik
+        });
+    </script>
+    
+</body>
+</html>

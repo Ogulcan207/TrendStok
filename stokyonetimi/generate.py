@@ -36,7 +36,7 @@ def create_customers():
         budget = random.randint(500, 3000)
         total_spent = 0.00
         username = fake.user_name()
-        password = make_password('test1234')  # Şifre hash'lenerek kaydediliyor
+        password = make_password('test123')  # Şifre hash'lenerek kaydediliyor
         email = fake.email()  # E-posta oluşturuluyor
 
         Customer.objects.create(
