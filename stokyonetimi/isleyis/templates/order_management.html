@@ -99,6 +99,7 @@
                 <th>Müşteri</th>
                 <th>Toplam Fiyat</th>
                 <th>Öncelik Skoru</th>
+                <th>Bekleme Süresi</th>
                 <th>Ürün Detayları</th>
                 <th>İşlem</th>
             </tr>
@@ -110,6 +111,7 @@
                 <td>{{ order.customer.customer_name }}</td>
                 <td>{{ order.total_price }}</td>
                 <td>{{ order.priority_score }}</td>
+                <td>{{ order.elapsed_time }}</td>
                 <td>
                     <table class="nested-table">
                         <thead>

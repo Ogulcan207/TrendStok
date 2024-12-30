@@ -1,0 +1,54 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Log Yönetimi</title>
+    <link rel="stylesheet" href="{% static 'css/log_management.css' %}">
+</head>
+<body>
+    <header>
+        <h1>Log Yönetimi</h1>
+        <a href="{% url 'admin_dashboard' %}" class="back-btn">Admin Paneline Dön</a>
+    </header>
+    <main>
+        <table>
+            <thead>
+                <tr>
+                    <th>Log ID</th>
+                    <th>Log Türü</th>
+                    <th>Log Detayı</th>
+                    <th>Müşteri</th>
+                    <th>Sipariş</th>
+                    <th>İşlem Zamanı</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in logs %}
+                <tr>
+                    <td>{{ log.id }}</td>
+                    <td>{{ log.log_type }}</td>
+                    <td>{{ log.log_details }}</td>
+                    <td>
+                        {% if log.customer %}
+                            {{ log.customer.customer_name }}
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if log.order %}
+                            {{ log.order.id }}
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </td>
+                    <td>{{ log.log_date }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>        
+    </main>
+</body>
+</html>

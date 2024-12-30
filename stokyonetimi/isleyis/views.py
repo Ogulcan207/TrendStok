@@ -2,14 +2,14 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.hashers import check_password, make_password
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth import authenticate, login
-from .models import Customer, Product, Order, OrderDetail
-import json, time, queue
+from .models import Customer, Product, Order, OrderDetail, Log
 from django.utils.timezone import now
 from threading import Thread, Lock
 from django.http import JsonResponse, HttpResponse
 from django.db import transaction
-from celery import shared_task
 from decimal import Decimal
+from django.contrib import messages
+import json, time
 
 class OrderThread(Thread):
     def __init__(self, order):
@@ -22,6 +22,21 @@ class OrderThread(Thread):
         self.order.order_status = 'Completed'
         self.order.save()
         print(f"Sipariş {self.order.id} tamamlandı.")
+
+def create_log(log_type, log_details, customer=None, order=None):
+    """
+    Log kaydı oluşturur.
+    :param log_type: Log türü (Info, Warning, Error)
+    :param log_details: Log detayı (metin)
+    :param customer: İlgili müşteri (opsiyonel)
+    :param order: İlgili sipariş (opsiyonel)
+    """
+    Log.objects.create(
+        log_type=log_type,
+        log_details=log_details,
+        customer=customer,
+        order=order
+    )
 
 def login_view(request):
     if request.method == 'POST':
@@ -47,6 +62,10 @@ def login_required(view_func):
             return redirect('login')
         return view_func(request, *args, **kwargs)
     return wrapper
+
+def log_management(request):
+    logs = Log.objects.all().order_by('-log_date')
+    return render(request, 'log_management.html', {'logs': logs})
 
 @login_required
 def user_dashboard(request):
@@ -237,31 +256,27 @@ def user_orders(request):
 
     return render(request, 'user_orders.html', {'orders': orders})
 
-from django.contrib import messages
-
 @login_required
 def cancel_user_order(request, order_id):
-    """
-    Kullanıcının kendi siparişini iptal etmesine izin verir.
-    """
     try:
-        # Oturumdaki kullanıcıyı alın
         user = Customer.objects.get(id=request.session['user_id'])
-        
-        # Kullanıcıya ait siparişi bulun
         order = Order.objects.get(id=order_id, customer=user)
 
-        # Yalnızca beklemede olan siparişler iptal edilebilir
         if order.order_status == 'Pending':
-            order.delete()
+            create_log(
+                log_type="Warning",
+                log_details=f"User {user.username} cancelled their order with ID {order.id}.",
+                customer=user,
+                order=order
+            )
             messages.success(request, "Sipariş başarıyla iptal edildi.")
+            order.delete()
         else:
             messages.warning(request, "Tamamlanmış veya başarısız siparişleri iptal edemezsiniz.")
-    
+
     except Order.DoesNotExist:
         messages.error(request, "Sipariş bulunamadı veya size ait değil.")
 
-    # Kullanıcının sipariş sayfasına yönlendirin
     return redirect('user_orders')
 
 def admin_login(request):
@@ -287,30 +302,29 @@ def place_order(request):
         if not cart:
             return redirect('cart')
 
-        # Toplam fiyatı hesapla
         total_price = sum(Decimal(item['price']) * item['quantity'] for item in cart)
 
-        # Kullanıcının bütçesini kontrol et
         if user.budget < total_price:
-            from django.contrib import messages
             messages.error(request, "Yetersiz bütçe. Siparişi tamamlayamazsınız.")
+            create_log(
+                log_type="Error",
+                log_details=f"User {user.username} attempted to place an order with insufficient budget.",
+                customer=user
+            )
             return redirect('cart')
 
-        # Yeni siparişi oluştur
         order = Order.objects.create(
             customer=user,
             total_price=total_price,
             order_status='Pending',
-            priority_score=0,  # Gerekirse hesaplayabilirsiniz
+            priority_score=0,
             elapsed_time=0
         )
 
-        # Sipariş detaylarını oluştur
         for item in cart:
             product = Product.objects.filter(id=item.get('id')).first()
             if product:
-                if item.get('quantity', 1) > 5:  # Ürün miktarını tekrar kontrol et
-                    from django.contrib import messages
+                if item.get('quantity', 1) > 5:
                     messages.error(request, f"{product.product_name} ürününden en fazla 5 adet alabilirsiniz.")
                     return redirect('cart')
 
@@ -320,9 +334,16 @@ def place_order(request):
                     quantity=item.get('quantity', 1),
                     price=Decimal(item.get('price', 0))
                 )
+
+        user.budget -= total_price
         user.save()
-        # Sepeti temizle
         request.session['cart'] = []
+        create_log(
+            log_type="Info",
+            log_details=f"User {user.username} placed an order with ID {order.id}.",
+            customer=user,
+            order=order
+        )
         return redirect('user_dashboard')
 
 def update_order_priorities():
@@ -361,7 +382,7 @@ def calculate_priority_score(customer_type, elapsed_time, weight=0.5):
     return base_priority + (elapsed_time * weight)
 
 # Global mutex dictionary
-product_locks = {}
+product_locks = {product.id: Lock() for product in Product.objects.all()}
 
 # Initialize locks for each product
 for product in Product.objects.all():
@@ -369,7 +390,7 @@ for product in Product.objects.all():
 
 def process_order(order):
     order_details = OrderDetail.objects.filter(order=order)
-    
+
     for detail in order_details:
         with product_locks[detail.product.id]:  # Mutex kilidi
             if detail.product.stock >= detail.quantity:
@@ -378,22 +399,35 @@ def process_order(order):
             else:
                 order.order_status = 'Failed'
                 order.save()
-                print(f"Sipariş {order.id} başarısız. Yetersiz stok.")
-                return  # Yetersiz stok varsa diğer detayları işlememek için çıkış yapıyoruz.
+                create_log(
+                    log_type="Error",
+                    log_details=f"Order {order.id} failed due to insufficient stock for product {detail.product.product_name}.",
+                    customer=order.customer,
+                    order=order
+                )
+                return  # Stok yetersizse işlem durdurulur.
 
-    # Eğer tüm ürünler başarıyla işlendiyse sipariş durumu tamamlandı olarak güncellenir.
     order.order_status = 'Completed'
     order.save()
-    print(f"Sipariş {order.id} tamamlandı.")
+    create_log(
+        log_type="Info",
+        log_details=f"Order {order.id} completed successfully.",
+        customer=order.customer,
+        order=order
+    )
 
 def approve_all_orders(request):
     if request.method == 'POST':
         orders = Order.objects.filter(order_status='Pending')
-        
+
         for order in orders:
-            thread = Thread(target=process_order, args=(order,))
+            thread = OrderThread(order)
             thread.start()
 
+        create_log(
+            log_type="Info",
+            log_details="Admin approved all pending orders."
+        )
         return redirect('order_management')
     
 def cancel_order(request, order_id):
@@ -402,6 +436,18 @@ def cancel_order(request, order_id):
     """
     try:
         order = Order.objects.get(id=order_id)
+
+        # Log kaydı yapmadan önce siparişin gerçekten veritabanında olduğundan emin olun
+        if not order.pk:
+            order.save()
+
+        create_log(
+            log_type="Warning",
+            log_details=f"Sipariş ID {order_id} iptal edildi.",
+            customer=order.customer,
+            order=order
+        )
+
         order.delete()
         return redirect('order_management')  # Sipariş yönetim sayfasına geri dön
     except Order.DoesNotExist:

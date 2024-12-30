@@ -29,7 +29,17 @@
                     <tr>
                         <td>{{ order.id }}</td>
                         <td>{{ order.order_date }}</td>
-                        <td>{{ order.order_status }}</td>
+                        <td>
+                            {% if order.order_status == 'Pending' %}
+                                <img src="{% static 'products/wait-2.gif' %}" width="35" height="35">
+                            {% elif order.order_status == 'Completed' %}
+                                <img src="{% static 'products/tick.png' %}" width="30" height="30">
+                            {% elif order.order_status == 'Failed' %}
+                                <img src="{% static 'products/failed.png' %}" width="30" height="30">
+                            {% else %}
+                                <p>Durum bilinmiyor</p>
+                            {% endif %}
+                        </td>
                         <td>{{ order.total_price }}</td>
                         <td>
                             <ul>

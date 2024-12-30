@@ -6,6 +6,85 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Paneli</title>
     <link rel="stylesheet" href="{% static 'css/admin_dashboard.css' %}">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: #f4f4f4;
+        }
+
+        header {
+            background: #2c3e50;
+            color: #fff;
+            text-align: center;
+            padding: 15px 0;
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+
+        .sidebar {
+            background: #34495e;
+            color: #fff;
+            width: 250px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .sidebar h2 {
+            font-size: 20px;
+            margin-bottom: 20px;
+            text-align: center;
+            border-bottom: 1px solid #fff;
+            padding-bottom: 10px;
+        }
+
+        .sidebar ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .sidebar ul li {
+            margin: 15px 0;
+        }
+
+        .menu-link {
+            text-decoration: none;
+            color: #fff;
+            background: #3498db;
+            padding: 10px 15px;
+            display: block;
+            border-radius: 5px;
+            text-align: center;
+            transition: background 0.3s;
+        }
+
+        .menu-link:hover {
+            background: #2980b9;
+        }
+
+        .content {
+            flex-grow: 1;
+            padding: 40px;
+            background: #ecf0f1;
+        }
+
+        .content h2 {
+            color: #34495e;
+            font-size: 28px;
+        }
+
+        .content p {
+            color: #7f8c8d;
+            font-size: 18px;
+        }
+    </style>
 </head>
 <body>
     <header>
@@ -21,16 +100,15 @@
                     <li><a href="{% url 'stock_management' %}" class="menu-link">Stok Yönetimi</a></li>
                     <li><a href="{% url 'pie_chart' %}" class="menu-link">Dairesel Grafik</a></li>
                     <li><a href="{% url 'order_management' %}" class="menu-link">Sipariş Yönetimi</a></li>
+                    <li><a href="{% url 'log_management' %}" class="menu-link">Log Kayıtları</a></li>
                 </ul>
             </nav>
         </aside>
 
         <!-- Ana İçerik -->
         <main class="content">
-            <section>
-                <h2>Admin Paneline Hoş Geldiniz</h2>
-                <p>Üst panelden istediğiniz işlemi seçebilirsiniz.</p>
-            </section>
+            <h2>Admin Paneline Hoş Geldiniz</h2>
+            <p>Sol paneldeki menüden bir işlem seçin.</p>
         </main>
     </div>
 </body>
