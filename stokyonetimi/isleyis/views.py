@@ -1,10 +1,11 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.hashers import check_password, make_password
+from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth import authenticate, login
 from .models import Customer, Product, Order, OrderDetail
-import json, time
+import json, time, queue
 from django.utils.timezone import now
-from threading import Thread
+from threading import Thread, Lock
 from django.http import JsonResponse, HttpResponse
 from django.db import transaction
 from celery import shared_task
@@ -21,7 +22,6 @@ class OrderThread(Thread):
         self.order.order_status = 'Completed'
         self.order.save()
         print(f"Sipariş {self.order.id} tamamlandı.")
-
 
 def login_view(request):
     if request.method == 'POST':
@@ -120,8 +120,6 @@ def pie_chart(request):
 
     return render(request, 'pie_chart.html', {'products_data': products_data_json})
 
-from django.views.decorators.csrf import csrf_exempt
-
 @csrf_exempt
 def update_priorities_view(request):
     """
@@ -129,7 +127,6 @@ def update_priorities_view(request):
     """
     update_order_priorities()
     return JsonResponse({'status': 'success', 'message': 'Priorities updated!'})
-
 
 def order_management(request):
     update_order_priorities()
@@ -143,7 +140,6 @@ def order_management(request):
             return redirect('order_management')
 
     return render(request, 'order_management.html', {'orders': orders})
-
 
 @login_required
 def user_profile(request):
@@ -172,17 +168,14 @@ def update_profile(request):
             'products': Product.objects.all(),  # Ürün bilgilerini de gönder
         })
 
-
 def cart_view(request):
     cart = request.session.get('cart', [])
     total_price = sum(item['price'] * item['quantity'] for item in cart)
     
-
     return render(request, 'cart.html', {
         'cart': cart,
         'total_price': total_price,
     })
-
 
 def add_to_cart(request):
     if request.method == 'POST':
@@ -211,7 +204,6 @@ def add_to_cart(request):
         request.session['cart'] = cart
         return redirect('cart')
 
-
 def update_cart(request):
     if request.method == 'POST':
         product_id = int(request.POST.get('product_id'))
@@ -229,7 +221,6 @@ def update_cart(request):
         request.session['cart'] = cart
         return redirect('cart')
 
-
 def remove_from_cart(request):
     if request.method == 'POST':
         product_id = int(request.POST.get('product_id'))
@@ -238,6 +229,40 @@ def remove_from_cart(request):
         cart = [item for item in cart if item['id'] != product_id]
         request.session['cart'] = cart
         return redirect('cart')
+
+@login_required
+def user_orders(request):
+    user = Customer.objects.get(id=request.session['user_id'])
+    orders = Order.objects.filter(customer=user).prefetch_related('order_details').order_by('-order_date')
+
+    return render(request, 'user_orders.html', {'orders': orders})
+
+from django.contrib import messages
+
+@login_required
+def cancel_user_order(request, order_id):
+    """
+    Kullanıcının kendi siparişini iptal etmesine izin verir.
+    """
+    try:
+        # Oturumdaki kullanıcıyı alın
+        user = Customer.objects.get(id=request.session['user_id'])
+        
+        # Kullanıcıya ait siparişi bulun
+        order = Order.objects.get(id=order_id, customer=user)
+
+        # Yalnızca beklemede olan siparişler iptal edilebilir
+        if order.order_status == 'Pending':
+            order.delete()
+            messages.success(request, "Sipariş başarıyla iptal edildi.")
+        else:
+            messages.warning(request, "Tamamlanmış veya başarısız siparişleri iptal edemezsiniz.")
+    
+    except Order.DoesNotExist:
+        messages.error(request, "Sipariş bulunamadı veya size ait değil.")
+
+    # Kullanıcının sipariş sayfasına yönlendirin
+    return redirect('user_orders')
 
 def admin_login(request):
     if request.method == 'POST':
@@ -295,13 +320,10 @@ def place_order(request):
                     quantity=item.get('quantity', 1),
                     price=Decimal(item.get('price', 0))
                 )
-
         user.save()
-
         # Sepeti temizle
         request.session['cart'] = []
         return redirect('user_dashboard')
-
 
 def update_order_priorities():
     """
@@ -314,6 +336,18 @@ def update_order_priorities():
             order.priority_score = calculate_priority_score(order.customer.customer_type, order.elapsed_time)
             order.save()
 
+def admin_order_list(request):
+    pending_orders = Order.objects.filter(order_status='Pending').order_by('-priority_score')
+    orders_data = [
+        {
+            'customer_name': order.customer.customer_name,
+            'product_name': order.product.product_name,
+            'priority_score': order.priority_score,
+            'status': order.order_status,
+        }
+        for order in pending_orders
+    ]
+    return JsonResponse({'orders': orders_data})
 
 def calculate_priority_score(customer_type, elapsed_time, weight=0.5):
     """
@@ -326,14 +360,41 @@ def calculate_priority_score(customer_type, elapsed_time, weight=0.5):
     base_priority = 15 if customer_type == 'Premium' else 10
     return base_priority + (elapsed_time * weight)
 
+# Global mutex dictionary
+product_locks = {}
+
+# Initialize locks for each product
+for product in Product.objects.all():
+    product_locks[product.id] = Lock()
+
+def process_order(order):
+    order_details = OrderDetail.objects.filter(order=order)
+    
+    for detail in order_details:
+        with product_locks[detail.product.id]:  # Mutex kilidi
+            if detail.product.stock >= detail.quantity:
+                detail.product.stock -= detail.quantity
+                detail.product.save()
+            else:
+                order.order_status = 'Failed'
+                order.save()
+                print(f"Sipariş {order.id} başarısız. Yetersiz stok.")
+                return  # Yetersiz stok varsa diğer detayları işlememek için çıkış yapıyoruz.
+
+    # Eğer tüm ürünler başarıyla işlendiyse sipariş durumu tamamlandı olarak güncellenir.
+    order.order_status = 'Completed'
+    order.save()
+    print(f"Sipariş {order.id} tamamlandı.")
 
 def approve_all_orders(request):
     if request.method == 'POST':
-        pending_orders = Order.objects.filter(order_status='Pending')
-        for order in pending_orders:
-            order.order_status = 'Completed'
-            order.save()
-        return redirect('admin_dashboard')
+        orders = Order.objects.filter(order_status='Pending')
+        
+        for order in orders:
+            thread = Thread(target=process_order, args=(order,))
+            thread.start()
+
+        return redirect('order_management')
     
 def cancel_order(request, order_id):
     """

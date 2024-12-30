@@ -162,7 +162,7 @@
             // Hepsini Onayla
             document.querySelector('.approve-btn').addEventListener('click', (event) => {
                 event.preventDefault();
-                fetch('/admin/approve-all', { method: 'POST', headers: { 'X-CSRFToken': '{{ csrf_token }}' } })
+                fetch('/isleyis/order-management/approve-all/', { method: 'POST', headers: { 'X-CSRFToken': '{{ csrf_token }}' } })
                     .then(() => {
                         console.log('All orders approved!');
                         location.reload();

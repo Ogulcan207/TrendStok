@@ -21,7 +21,7 @@ urlpatterns = [
     # Sipariş işlemleri
     path('place-order/', views.place_order, name='place_order'),
     path('admin/order-list/', views.admin_order_list, name='admin_order_list'),
-    path('admin/approve-all/', views.approve_all_orders, name='approve_all_orders'),
+    path('order-management/approve-all/', views.approve_all_orders, name='approve_all_orders'),
     path('order-management/update-priorities/', views.update_priorities_view, name='update_priorities'),
     path('order-management/cancel/<int:order_id>/', views.cancel_order, name='cancel_order'),
     
@@ -29,4 +29,6 @@ urlpatterns = [
     # Kullanıcı profili
     path('user-profile/', views.user_profile, name='user_profile'),
     path('update-profile/', views.update_profile, name='update_profile'),
+    path('user-orders/', views.user_orders, name='user_orders'),
+    path('user-orders/cancel/<int:order_id>/', views.cancel_user_order, name='cancel_user_order'),
 ]
