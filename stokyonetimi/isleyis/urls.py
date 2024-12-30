@@ -23,6 +23,8 @@ urlpatterns = [
     path('admin/order-list/', views.admin_order_list, name='admin_order_list'),
     path('admin/approve-all/', views.approve_all_orders, name='approve_all_orders'),
     path('order-management/update-priorities/', views.update_priorities_view, name='update_priorities'),
+    path('order-management/cancel/<int:order_id>/', views.cancel_order, name='cancel_order'),
+    
 
     # Kullanıcı profili
     path('user-profile/', views.user_profile, name='user_profile'),

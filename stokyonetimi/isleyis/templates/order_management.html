@@ -6,11 +6,88 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="{% static 'css/admin_dashboard.css' %}">
     <title>Sipariş Yönetimi</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #6b5b95, #88b04b);
+            color: #fff;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h2 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background: #333;
+            color: #fff;
+        }
+
+        tr:hover {
+            background: #575757;
+        }
+
+        button {
+            padding: 8px 12px;
+            border: none;
+            background-color: #88b04b;
+            color: #fff;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        button:hover {
+            background-color: #6b5b95;
+        }
+
+        .approve-btn {
+            margin-bottom: 20px;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+            font-size: 16px;
+        }
+
+        .cancel-btn {
+            background-color: #e74c3c;
+        }
+
+        .cancel-btn:hover {
+            background-color: #c0392b;
+        }
+
+        .nested-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+        }
+
+        .nested-table th, .nested-table td {
+            background: rgba(255, 255, 255, 0.2);
+        }
+    </style>
 </head>
 <body>
     <h2>Sipariş Yönetimi</h2>
 
-    <form method="post" style="margin-bottom: 20px;">
+    <form method="post">
         {% csrf_token %}
         <button type="submit" name="approve_all" class="approve-btn">Hepsini Onayla</button>
     </form>
@@ -21,7 +98,9 @@
                 <th>Sipariş ID</th>
                 <th>Müşteri</th>
                 <th>Toplam Fiyat</th>
+                <th>Öncelik Skoru</th>
                 <th>Ürün Detayları</th>
+                <th>İşlem</th>
             </tr>
         </thead>
         <tbody>
@@ -30,8 +109,9 @@
                 <td>{{ order.id }}</td>
                 <td>{{ order.customer.customer_name }}</td>
                 <td>{{ order.total_price }}</td>
+                <td>{{ order.priority_score }}</td>
                 <td>
-                    <table>
+                    <table class="nested-table">
                         <thead>
                             <tr>
                                 <th>Ürün</th>
@@ -50,6 +130,12 @@
                         </tbody>
                     </table>
                 </td>
+                <td>
+                    <form method="post" action="{% url 'cancel_order' order.id %}">
+                        {% csrf_token %}
+                        <button type="submit" class="cancel-btn">İptal Et</button>
+                    </form>
+                </td>
             </tr>
             {% endfor %}
         </tbody>
@@ -57,24 +143,21 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            // Sipariş Listesi Güncelleme
             function refreshPriorities() {
-            fetch('/order-management/', {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-            })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.status === 'success') {
-                        console.log('Priorities updated successfully!');
-                        location.reload(); // Sayfayı yeniden yükle
-                    }
+                fetch('/isleyis/order-management/', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token }}',
+                    },
                 })
+                .then(data => {
+                        location.reload(); // Sayfayı yeniden yükle
+                    })
                 .catch(error => console.error('Error:', error));
-        }
-        setInterval(refreshPriorities, 10000); // Her 10 saniyede bir güncelle
+            }
+
+            setInterval(refreshPriorities, 10000); // Her 10 saniyede bir güncelle
 
             // Hepsini Onayla
             document.querySelector('.approve-btn').addEventListener('click', (event) => {

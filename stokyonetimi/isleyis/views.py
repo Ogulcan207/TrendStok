@@ -5,7 +5,7 @@ from .models import Customer, Product, Order, OrderDetail
 import json, time
 from django.utils.timezone import now
 from threading import Thread
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.db import transaction
 from celery import shared_task
 from decimal import Decimal
@@ -315,19 +315,6 @@ def update_order_priorities():
             order.save()
 
 
-def admin_order_list(request):
-    pending_orders = Order.objects.filter(order_status='Pending').order_by('-priority_score')
-    orders_data = [
-        {
-            'customer_name': order.customer.customer_name,
-            'product_name': order.product.product_name,
-            'priority_score': order.priority_score,
-            'status': order.order_status,
-        }
-        for order in pending_orders
-    ]
-    return JsonResponse({'orders': orders_data})
-
 def calculate_priority_score(customer_type, elapsed_time, weight=0.5):
     """
     Dinamik öncelik skorunu hesaplar.
@@ -348,3 +335,13 @@ def approve_all_orders(request):
             order.save()
         return redirect('admin_dashboard')
     
+def cancel_order(request, order_id):
+    """
+    Siparişi iptal eder ve veritabanından siler.
+    """
+    try:
+        order = Order.objects.get(id=order_id)
+        order.delete()
+        return redirect('order_management')  # Sipariş yönetim sayfasına geri dön
+    except Order.DoesNotExist:
+        return HttpResponse("Sipariş bulunamadı", status=404)
